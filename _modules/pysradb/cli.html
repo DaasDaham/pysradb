@@ -1,0 +1,1278 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>pysradb.cli &#8212; pysradb 0.10.3-dev0 documentation</title>
+    <link rel="stylesheet" href="../../_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pysradb 0.10.3-dev0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <h2>Contents</h2>
+    <div class="sidebar-localtoc">
+      <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">pysradb: Python package for interacting with SRAdb and downloading datasets from SRA.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cmdline.html">CLI Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python-api-usage.html">Python API Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage_scenarios.html">Usage Scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">pysradb</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html">History</a></li>
+</ul>
+
+    </div>
+  </div>
+</div>
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="../../search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="../../index.html">Docs</a></li>
+              
+                <li><a href="../index.html">Module code</a></li>
+              
+              <li>pysradb.cli</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <h1>Source code for pysradb.cli</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Command line interface for pysradb</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">__version__</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">confirm</span>
+<span class="kn">from</span> <span class="nn">.sradb</span> <span class="kn">import</span> <span class="n">download_sradb_file</span>
+<span class="kn">from</span> <span class="nn">.sradb</span> <span class="kn">import</span> <span class="n">SRAdb</span>
+<span class="kn">from</span> <span class="nn">.sraweb</span> <span class="kn">import</span> <span class="n">SRAweb</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+
+<div class="viewcode-block" id="CustomFormatterArgP"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.CustomFormatterArgP">[docs]</a><span class="k">class</span> <span class="nc">CustomFormatterArgP</span><span class="p">(</span>
+    <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">,</span> <span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span>
+<span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="ArgParser"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.ArgParser">[docs]</a><span class="k">class</span> <span class="nc">ArgParser</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">):</span>
+<div class="viewcode-block" id="ArgParser.error"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.ArgParser.error">[docs]</a>    <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;error: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">print_help</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">saveto</span><span class="p">:</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">saveto</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">):</span>
+            <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.max_colwidth&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Bug in pandas 0.25.3: https://github.com/pandas-dev/pandas/issues/24980</span>
+            <span class="c1"># causes extra leading spaces</span>
+            <span class="n">to_print</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">justify</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">col_space</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
+            <span class="n">to_print_split</span> <span class="o">=</span> <span class="n">to_print</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+            <span class="n">to_print</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">to_print_split</span><span class="p">:</span>
+                <span class="n">to_print</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">())</span>
+            <span class="nb">print</span><span class="p">((</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">))</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">to_print</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s2">&quot;SRAmetadb.sqlite&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">db</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        if confirm(</span>
+<span class="sd">            &quot;SRAmetadb.sqlite file was not found in the current directory. Please quit and specify the path using `--db &lt;DB_PATH&gt;`&quot;</span>
+<span class="sd">            + os.linesep</span>
+<span class="sd">            + &quot;Otherwise, should I download SRAmetadb.sqlite in the current directory?&quot;</span>
+<span class="sd">        ):</span>
+<span class="sd">            download_sradb_file()</span>
+<span class="sd">        else:</span>
+<span class="sd">            sys.exit(1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Use the web version</span>
+        <span class="k">return</span> <span class="s2">&quot;web&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">db</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">db</span>
+
+
+<div class="viewcode-block" id="get_sra_object"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.get_sra_object">[docs]</a><span class="k">def</span> <span class="nf">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="o">=</span><span class="s2">&quot;web&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">db</span> <span class="o">==</span> <span class="s2">&quot;web&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SRAweb</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">SRAdb</span><span class="p">(</span><span class="n">db</span><span class="p">)</span></div>
+
+
+<span class="c1">################### metadb #########################</span>
+<div class="viewcode-block" id="metadb"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.metadb">[docs]</a><span class="k">def</span> <span class="nf">metadb</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">,</span> <span class="n">keep_gz</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">download_sradb_file</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">,</span> <span class="n">keep_gz</span><span class="p">)</span></div>
+
+
+<span class="c1">#####################################################</span>
+
+
+<span class="c1">###################### metadata ##############################</span>
+<div class="viewcode-block" id="metadata"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.metadata">[docs]</a><span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">assay</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">expand</span><span class="p">,</span> <span class="n">saveto</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">sra_metadata</span><span class="p">(</span>
+        <span class="n">srp_id</span><span class="p">,</span>
+        <span class="n">assay</span><span class="o">=</span><span class="n">assay</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">################################################################</span>
+
+
+<span class="c1">################# download ##########################</span>
+<div class="viewcode-block" id="download"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.download">[docs]</a><span class="k">def</span> <span class="nf">download</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">srx</span><span class="p">,</span> <span class="n">srp</span><span class="p">,</span> <span class="n">skip_confirmation</span><span class="p">,</span> <span class="n">use_wget</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">use_wget</span><span class="p">:</span>
+        <span class="n">protocol</span> <span class="o">=</span> <span class="s2">&quot;ftp&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">protocol</span> <span class="o">=</span> <span class="s2">&quot;fasp&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s2">&quot;pysradb_downloads&quot;</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">srp</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">):</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="c1"># pandas has different paddings to indent,</span>
+            <span class="c1"># we cannot replace all sapces at once since the description column</span>
+            <span class="c1"># can have text with space</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;\s\s\s&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;\s\s&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">+&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;\s</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">\s&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># For first line which is the header, allow substituting spaces with tab at once</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;\s+&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">sradb</span><span class="o">.</span><span class="n">download</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="o">=</span><span class="n">out_dir</span><span class="p">,</span>
+            <span class="n">filter_by_srx</span><span class="o">=</span><span class="n">srx</span><span class="p">,</span>
+            <span class="n">skip_confirmation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">protocol</span><span class="o">=</span><span class="n">protocol</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">srp_x</span> <span class="ow">in</span> <span class="n">srp</span><span class="p">:</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">sra_metadata</span><span class="p">(</span><span class="n">srp_x</span><span class="p">,</span> <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">sradb</span><span class="o">.</span><span class="n">download</span><span class="p">(</span>
+                <span class="n">df</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+                <span class="n">out_dir</span><span class="o">=</span><span class="n">out_dir</span><span class="p">,</span>
+                <span class="n">filter_by_srx</span><span class="o">=</span><span class="n">srx</span><span class="p">,</span>
+                <span class="n">skip_confirmation</span><span class="o">=</span><span class="n">skip_confirmation</span><span class="p">,</span>
+            <span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################</span>
+
+
+<span class="c1">######################### search #################################</span>
+<div class="viewcode-block" id="search"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.search">[docs]</a><span class="k">def</span> <span class="nf">search</span><span class="p">(</span><span class="n">search_text</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">assay</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">expand</span><span class="p">,</span> <span class="n">saveto</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">search_sra</span><span class="p">(</span>
+        <span class="n">search_text</span><span class="p">,</span>
+        <span class="n">assay</span><span class="o">=</span><span class="n">assay</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">####################################################################</span>
+
+
+<span class="c1">######################### gse-to-gsm ###############################</span>
+<div class="viewcode-block" id="gse_to_gsm"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gse_to_gsm">[docs]</a><span class="k">def</span> <span class="nf">gse_to_gsm</span><span class="p">(</span><span class="n">gse_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gse_to_gsm</span><span class="p">(</span>
+        <span class="n">gse_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">####################################################################</span>
+
+
+<span class="c1">######################## gse-to-srp ################################</span>
+<div class="viewcode-block" id="gse_to_srp"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gse_to_srp">[docs]</a><span class="k">def</span> <span class="nf">gse_to_srp</span><span class="p">(</span><span class="n">gse_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gse_to_srp</span><span class="p">(</span>
+        <span class="n">gse_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">######################################################################</span>
+
+
+<span class="c1">######################### gsm-to-gse #################################</span>
+<div class="viewcode-block" id="gsm_to_gse"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gsm_to_gse">[docs]</a><span class="k">def</span> <span class="nf">gsm_to_gse</span><span class="p">(</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gsm_to_gse</span><span class="p">(</span>
+        <span class="n">gsm_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">########################################################################</span>
+
+
+<span class="c1">############################ gsm-to-srp ################################</span>
+<div class="viewcode-block" id="gsm_to_srp"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gsm_to_srp">[docs]</a><span class="k">def</span> <span class="nf">gsm_to_srp</span><span class="p">(</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gsm_to_srp</span><span class="p">(</span>
+        <span class="n">gsm_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">########################################################################</span>
+
+
+<span class="c1">############################ gsm-to-srr ################################</span>
+<div class="viewcode-block" id="gsm_to_srr"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gsm_to_srr">[docs]</a><span class="k">def</span> <span class="nf">gsm_to_srr</span><span class="p">(</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gsm_to_srr</span><span class="p">(</span>
+        <span class="n">gsm_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">########################################################################</span>
+
+
+<span class="c1">############################ gsm-to-srs ################################</span>
+<div class="viewcode-block" id="gsm_to_srs"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gsm_to_srs">[docs]</a><span class="k">def</span> <span class="nf">gsm_to_srs</span><span class="p">(</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gsm_to_srs</span><span class="p">(</span>
+        <span class="n">gsm_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">########################################################################</span>
+
+
+<span class="c1">############################# gsm-to-srx ###############################</span>
+<div class="viewcode-block" id="gsm_to_srx"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.gsm_to_srx">[docs]</a><span class="k">def</span> <span class="nf">gsm_to_srx</span><span class="p">(</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">gsm_to_srx</span><span class="p">(</span>
+        <span class="n">gsm_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srp-to-gse ##################################</span>
+<div class="viewcode-block" id="srp_to_gse"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srp_to_gse">[docs]</a><span class="k">def</span> <span class="nf">srp_to_gse</span><span class="p">(</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srp_to_gse</span><span class="p">(</span>
+        <span class="n">srp_id</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srp-to-srr ##################################</span>
+<div class="viewcode-block" id="srp_to_srr"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srp_to_srr">[docs]</a><span class="k">def</span> <span class="nf">srp_to_srr</span><span class="p">(</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srp_to_srr</span><span class="p">(</span>
+        <span class="n">srp_id</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srp-to-srs ##################################</span>
+<div class="viewcode-block" id="srp_to_srs"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srp_to_srs">[docs]</a><span class="k">def</span> <span class="nf">srp_to_srs</span><span class="p">(</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srp_to_srs</span><span class="p">(</span>
+        <span class="n">srp_id</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srp-to-srx ##################################</span>
+<div class="viewcode-block" id="srp_to_srx"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srp_to_srx">[docs]</a><span class="k">def</span> <span class="nf">srp_to_srx</span><span class="p">(</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srp_to_srx</span><span class="p">(</span>
+        <span class="n">srp_id</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srr-to-gsm ##################################</span>
+<div class="viewcode-block" id="srr_to_gsm"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srr_to_gsm">[docs]</a><span class="k">def</span> <span class="nf">srr_to_gsm</span><span class="p">(</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srr_to_gsm</span><span class="p">(</span>
+        <span class="n">srr_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">########################################################################</span>
+
+
+<span class="c1">########################### srr-to-srp ##################################</span>
+<div class="viewcode-block" id="srr_to_srp"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srr_to_srp">[docs]</a><span class="k">def</span> <span class="nf">srr_to_srp</span><span class="p">(</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srr_to_srp</span><span class="p">(</span>
+        <span class="n">srr_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srr-to-srs ##################################</span>
+<div class="viewcode-block" id="srr_to_srs"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srr_to_srs">[docs]</a><span class="k">def</span> <span class="nf">srr_to_srs</span><span class="p">(</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srr_to_srs</span><span class="p">(</span>
+        <span class="n">srr_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srr-to-srx ##################################</span>
+<div class="viewcode-block" id="srr_to_srx"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srr_to_srx">[docs]</a><span class="k">def</span> <span class="nf">srr_to_srx</span><span class="p">(</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srr_to_srx</span><span class="p">(</span>
+        <span class="n">srr_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srs-to-gsm ##################################</span>
+<div class="viewcode-block" id="srs_to_gsm"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srs_to_gsm">[docs]</a><span class="k">def</span> <span class="nf">srs_to_gsm</span><span class="p">(</span><span class="n">srs_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srs_to_gsm</span><span class="p">(</span>
+        <span class="n">srs_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srs-to-srx ##################################</span>
+<div class="viewcode-block" id="srs_to_srx"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srs_to_srx">[docs]</a><span class="k">def</span> <span class="nf">srs_to_srx</span><span class="p">(</span><span class="n">srs_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srs_to_srx</span><span class="p">(</span>
+        <span class="n">srs_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srx-to-srp ##################################</span>
+<div class="viewcode-block" id="srx_to_srp"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srx_to_srp">[docs]</a><span class="k">def</span> <span class="nf">srx_to_srp</span><span class="p">(</span><span class="n">srx_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srx_to_srp</span><span class="p">(</span>
+        <span class="n">srx_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srx-to-srr ##################################</span>
+<div class="viewcode-block" id="srx_to_srr"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srx_to_srr">[docs]</a><span class="k">def</span> <span class="nf">srx_to_srr</span><span class="p">(</span><span class="n">srx_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srx_to_srr</span><span class="p">(</span>
+        <span class="n">srx_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<span class="c1">########################### srx-to-srs ##################################</span>
+<div class="viewcode-block" id="srx_to_srs"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.srx_to_srs">[docs]</a><span class="k">def</span> <span class="nf">srx_to_srs</span><span class="p">(</span><span class="n">srx_ids</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">saveto</span><span class="p">,</span> <span class="n">detailed</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">_check_sradb_file</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">sradb</span> <span class="o">=</span> <span class="n">get_sra_object</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">sradb</span><span class="o">.</span><span class="n">srx_to_srs</span><span class="p">(</span>
+        <span class="n">srx_ids</span><span class="p">,</span>
+        <span class="n">detailed</span><span class="o">=</span><span class="n">detailed</span><span class="p">,</span>
+        <span class="n">sample_attribute</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+        <span class="n">expand_sample_attributes</span><span class="o">=</span><span class="n">expand</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_print_save_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">saveto</span><span class="p">)</span>
+    <span class="n">sradb</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#########################################################################</span>
+
+
+<div class="viewcode-block" id="parse_args"><a class="viewcode-back" href="../../pysradb.html#pysradb.cli.parse_args">[docs]</a><span class="k">def</span> <span class="nf">parse_args</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Argument parser&quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">dedent</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;\</span>
+<span class="sd">    pysradb: Query NGS metadata and data from NCBI Sequence Read Archive.</span>
+<span class="sd">    version: {}.</span>
+<span class="sd">    Citation: 10.12688/f1000research.18676.1&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">__version__</span>
+            <span class="p">)</span>
+        <span class="p">),</span>
+        <span class="n">formatter_class</span><span class="o">=</span><span class="n">CustomFormatterArgP</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparsers</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_subparsers</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;subcommands&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;command&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--version&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;version&quot;</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(prog)s</span><span class="s2"> </span><span class="si">{version}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">__version__</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--citation&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;version&quot;</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">dedent</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Choudhary, Saket. &quot;pysradb: A Python Package to Query next-Generation Sequencing Metadata and Data from NCBI Sequence Read Archive.&quot; F1000Research, vol. 8, F1000 (Faculty of 1000 Ltd), Apr. 2019, p. 532 (https://f1000research.com/articles/8-532/v1)</span>
+
+<span class="sd">        @article{Choudhary2019,</span>
+<span class="sd">        doi = {10.12688/f1000research.18676.1},</span>
+<span class="sd">        url = {https://doi.org/10.12688/f1000research.18676.1},</span>
+<span class="sd">        year = {2019},</span>
+<span class="sd">        month = apr,</span>
+<span class="sd">        publisher = {F1000 (Faculty of 1000 Ltd)},</span>
+<span class="sd">        volume = {8},</span>
+<span class="sd">        pages = {532},</span>
+<span class="sd">        author = {Saket Choudhary},</span>
+<span class="sd">        title = {pysradb: A Python package to query next-generation sequencing metadata and data from {NCBI} Sequence Read Archive},</span>
+<span class="sd">        journal = {F1000Research}</span>
+<span class="sd">        }</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">),</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;how to cite&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;metadb&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Download SRAmetadb.sqlite&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--out-dir&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output directory location&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--overwrite&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Overwrite existing file&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--keep-gz&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should keep SRAmetadb.sqlite.gz post decompression&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">metadb</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+        <span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Fetch metadata for SRA project (SRPnnnn)&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save metadata dataframe to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--assay&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Include assay type in output&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Display detailed metadata table&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srp_id&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;download&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Download SRA project (SRPnnnn)&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--out-dir&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output directory root&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--srx&quot;</span><span class="p">,</span> <span class="s2">&quot;-x&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Download only these SRX(s)&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--srp&quot;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;SRP ID&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--skip-confirmation&quot;</span><span class="p">,</span> <span class="s2">&quot;-y&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Skip confirmation&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--use-wget&quot;</span><span class="p">,</span> <span class="s2">&quot;-w&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Use wget instead of aspera&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">download</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;search&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Search SRA for matching text&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save metadata dataframe to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--assay&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Include assay type in output&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Display detailed metadata table&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;search_text&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">search</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gse-to-gsm&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get GSM for a GSE&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [sample_accession (SRS),</span>
+<span class="s2">                                         run_accession (SRR),</span>
+<span class="s2">                                         sample_alias (GSM),</span>
+<span class="s2">                                         run_alias (GSM_r)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gse_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gse_to_gsm</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gse-to-srp&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRP for a GSE&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                           run_accession (SRR),</span>
+<span class="s2">                                           sample_accession (SRS),</span>
+<span class="s2">                                           experiment_alias (GSM_),</span>
+<span class="s2">                                           run_alias (GSM_r),</span>
+<span class="s2">                                           sample_alias (GSM)]</span>
+<span class="s2">                                           &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gse_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gse_to_gsm</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gsm-to-gse&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get GSE for a GSM&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [sample_accession (SRS),</span>
+<span class="s2">                                            run_accession (SRR),</span>
+<span class="s2">                                            sample_alias (GSM),</span>
+<span class="s2">                                            run_alias (GSM_r)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gsm_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gsm_to_gse</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gsm-to-srp&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRP for a GSM&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                            sample_accession (SRS),</span>
+<span class="s2">                                            run_accession (SRR),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            sample_alias (GSM),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gsm_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gsm_to_srp</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gsm-to-srr&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRR for a GSM&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                            sample_accession (SRS),</span>
+<span class="s2">                                            study_accession (SRS),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            sample_alias (GSM),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gsm_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gsm_to_srr</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gsm-to-srs&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRS for a GSM&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                            run_accession (SRR),</span>
+<span class="s2">                                            study_accession (SRP),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gsm_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gsm_to_srs</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;gsm-to-srx&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRX for a GSM&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                            sample_accession (SRS),</span>
+<span class="s2">                                            run_accession (SRR),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            sample_alias (GSM),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;gsm_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">gsm_to_srx</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srp-to-gse&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get GSE for a SRP&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output additional columns: [sample_accession, run_accession]&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srp_id&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srp_to_gse</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srp-to-srr&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRR for a SRP&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                            sample_accession (SRS),</span>
+<span class="s2">                                            study_alias (GSE),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            sample_alias (GSM_),</span>
+<span class="s2">                                            run_alias (GSM_r)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srp_id&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srp_to_srr</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srp-to-srs&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRS for a SRP&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [run_accession (SRR),</span>
+<span class="s2">                                            study_accession (SRP),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            sample_alias (GSM_),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srp_id&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srp_to_srs</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srp-to-srx&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRX for a SRP&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [sample_accession (SRS),</span>
+<span class="s2">                                            run_accession (SRR),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            sample_alias (GSM_),</span>
+<span class="s2">                                            run_alias (GSM_r)&#39;,</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srp_id&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srp_to_srx</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srr-to-gsm&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get GSM for a SRR&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;&#39;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                             study_accession (SRP),</span>
+<span class="s2">                                             run_alias (GSM_r),</span>
+<span class="s2">                                             sample_alias (GSM_),</span>
+<span class="s2">                                             experiment_alias (GSM),</span>
+<span class="s2">                                             study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srr_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srr_to_gsm</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srr-to-srp&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRP for a SRR&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;&#39;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                             sample_accession (SRS),</span>
+<span class="s2">                                             run_alias (GSM_r),</span>
+<span class="s2">                                             experiment_alias (GSM),</span>
+<span class="s2">                                             sample_alias (GSM_),</span>
+<span class="s2">                                             study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srr_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srr_to_srp</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srr-to-srs&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRS for a SRR&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;&#39;Output additional columns: [experiment_accession (SRX),</span>
+<span class="s2">                                             study_accession (SRP),</span>
+<span class="s2">                                             run_alias (GSM_r),</span>
+<span class="s2">                                             sample_alias (GSM_),</span>
+<span class="s2">                                             experiment_alias (GSM),</span>
+<span class="s2">                                             study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srr_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srr_to_srs</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srr-to-srx&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRX for a SRR&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [sample_accession (SRS),</span>
+<span class="s2">                                            study_accession (SRP),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            sample_alias (GSM_),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srr_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srr_to_srx</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srs-to-gsm&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get GSM for a SRS&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output additional columns: [run_accession, study_accession]&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srs_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srs_to_gsm</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srs-to-srx&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRX for a SRS&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output additional columns: [run_accession, study_accession]&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srs_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srs_to_srx</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srx-to-srp&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRP for a SRX&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Output additional columns: [run_accession (SRR),</span>
+<span class="s2">                                            sample_accession (SRS),</span>
+<span class="s2">                                            experiment_alias (GSM),</span>
+<span class="s2">                                            run_alias (GSM_r),</span>
+<span class="s2">                                            sample_alias (GSM),</span>
+<span class="s2">                                            study_alias (GSE)]&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srx_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srx_to_srp</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srx-to-srr&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRR for a SRX&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output additional columns: [sample_accession, study_accession]&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srx_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srx_to_srr</span><span class="p">)</span>
+
+    <span class="n">subparser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;srx-to-srs&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get SRS for a SRX&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--db&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to SRAmetadb.sqlite file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--saveto&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Save output to file&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--detailed&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output additional columns: [run_accession, study_accession]&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--desc&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be included&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--expand&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Should sample_attribute be expanded&quot;</span>
+    <span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;srx_ids&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">srx_to_srs</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;--help&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;metadb&quot;</span><span class="p">:</span>
+        <span class="n">metadb</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">overwrite</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">keep_gz</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;metadata&quot;</span><span class="p">:</span>
+        <span class="n">metadata</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srp_id</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">assay</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">expand</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;download&quot;</span><span class="p">:</span>
+        <span class="n">download</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">srx</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">srp</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">skip_confirmation</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;search&quot;</span><span class="p">:</span>
+        <span class="n">search</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">search_text</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">assay</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">expand</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gse-to-gsm&quot;</span><span class="p">:</span>
+        <span class="n">gse_to_gsm</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gse_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gse-to-srp&quot;</span><span class="p">:</span>
+        <span class="n">gse_to_srp</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gse_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gsm-to-gse&quot;</span><span class="p">:</span>
+        <span class="n">gsm_to_gse</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gsm-to-srp&quot;</span><span class="p">:</span>
+        <span class="n">gsm_to_srp</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gsm-to-srr&quot;</span><span class="p">:</span>
+        <span class="n">gsm_to_srr</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gsm-to-srs&quot;</span><span class="p">:</span>
+        <span class="n">gsm_to_srs</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;gsm-to-srx&quot;</span><span class="p">:</span>
+        <span class="n">gsm_to_srx</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">gsm_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srp-to-gse&quot;</span><span class="p">:</span>
+        <span class="n">srp_to_gse</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srp-to-srr&quot;</span><span class="p">:</span>
+        <span class="n">srp_to_srr</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srp-to-srs&quot;</span><span class="p">:</span>
+        <span class="n">srp_to_srs</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srp-to-srx&quot;</span><span class="p">:</span>
+        <span class="n">srp_to_srx</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srp_id</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srr-to-gsm&quot;</span><span class="p">:</span>
+        <span class="n">srr_to_gsm</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srr-to-srp&quot;</span><span class="p">:</span>
+        <span class="n">srr_to_srp</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srr-to-srs&quot;</span><span class="p">:</span>
+        <span class="n">srr_to_srs</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srr-to-srx&quot;</span><span class="p">:</span>
+        <span class="n">srr_to_srx</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srr_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srs-to-gsm&quot;</span><span class="p">:</span>
+        <span class="n">srs_to_gsm</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srs_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srs-to-srx&quot;</span><span class="p">:</span>
+        <span class="n">srs_to_srx</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srs_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srx-to-srp&quot;</span><span class="p">:</span>
+        <span class="n">srx_to_srp</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srx_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srx-to-srr&quot;</span><span class="p">:</span>
+        <span class="n">srx_to_srr</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srx_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;srx-to-srs&quot;</span><span class="p">:</span>
+        <span class="n">srx_to_srs</span><span class="p">(</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">srx_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">saveto</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">detailed</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">desc</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">expand</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parse_args</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+</pre></div>
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pysradb 0.10.3-dev0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="../../_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2018, Saket Choudhary. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

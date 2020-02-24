@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>Quickstart &#8212; pysradb 0.10.3-dev0 documentation</title>
+    <link rel="stylesheet" href="_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="gse-to-gsm" href="commands/gse-to-gsm.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="commands/gse-to-gsm.html" title="gse-to-gsm"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pysradb 0.10.3-dev0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <h2>Contents</h2>
+    <div class="sidebar-localtoc">
+      <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="readme.html">pysradb: Python package for interacting with SRAdb and downloading datasets from SRA.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install-pysradb">Install pysradb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-pysradb">Using pysradb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-full-list-of-possible-pysradb-operations">The full list of possible <cite>pysradb</cite> operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="commands/gse-to-gsm.html">gse-to-gsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/gse-to-srp.html">gse-to-srp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/metadata.html">metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/metadb.html">metadb</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srp-to-gse.html">srp-to-gse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srp-to-srr.html">srp-to-srr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srp-to-srs.html">srp-to-srs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srp-to-srx.html">srp-to-srx</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srr-to-srs.html">srr-to-srs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srr-to-srx.html">srr-to-srx</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srs-to-srx.html">srs-to-srx</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srx-to-srr.html">srx-to-srr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="commands/srx-to-srs.html">srx-to-srs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cmdline.html">CLI Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python-api-usage.html">Python API Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage_scenarios.html">Usage Scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">pysradb</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">History</a></li>
+</ul>
+
+    </div>
+  </div>
+</div>
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="installation.html"
+                        title="previous chapter">Installation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="commands/gse-to-gsm.html"
+                        title="next chapter">gse-to-gsm</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/quickstart.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="index.html">Docs</a></li>
+              
+              <li>Quickstart</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <div class="section" id="quickstart">
+<span id="id1"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="install-pysradb">
+<h2>Install pysradb<a class="headerlink" href="#install-pysradb" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pysradb</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-pysradb">
+<h2>Using pysradb<a class="headerlink" href="#using-pysradb" title="Permalink to this headline">¶</a></h2>
+<p><strong>Download SRAmetadb.sqlite</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pysradb</span> <span class="n">srametadb</span>
+</pre></div>
+</div>
+<p><strong>Convert SRP to SRX</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pysradb</span> <span class="n">srp</span><span class="o">-</span><span class="n">to</span><span class="o">-</span><span class="n">srx</span> <span class="n">SRP098789</span>
+</pre></div>
+</div>
+<p><strong>Convert GSE to SRP</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pysradb</span> <span class="n">gse</span><span class="o">-</span><span class="n">to</span><span class="o">-</span><span class="n">srp</span> <span class="n">GSE41637</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-full-list-of-possible-pysradb-operations">
+<h2>The full list of possible <cite>pysradb</cite> operations<a class="headerlink" href="#the-full-list-of-possible-pysradb-operations" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pysradb
+Usage: pysradb [OPTIONS] COMMAND [ARGS]...
+
+  pysradb: Query NGS metadata and data from NCBI Sequence Read Archive.
+
+  Citation: Pending.
+
+Options:
+  --version   Show the version and exit.
+  -h, --help  Show this message and exit.
+
+Commands:
+  download    Download SRA project (SRPnnnn)
+  gse-to-gsm  Get GSM for a GSE
+  gse-to-srp  Get SRP for a GSE
+  gsm-to-gse  Get GSE for a GSM
+  gsm-to-srp  Get SRP for a GSM
+  gsm-to-srr  Get SRR for a GSM
+  gsm-to-srx  Get SRX for a GSM
+  metadata    Fetch metadata for SRA project (SRPnnnn)
+  metadb      Download SRAmetadb.sqlite
+  search      Search SRA for matching text
+  srp-to-gse  Get GSE for a SRP
+  srp-to-srr  Get SRR for a SRP
+  srp-to-srs  Get SRS for a SRP
+  srp-to-srx  Get SRX for a SRP
+  srr-to-srp  Get SRP for a SRR
+  srr-to-srs  Get SRS for a SRR
+  srr-to-srx  Get SRX for a SRR
+  srs-to-srx  Get SRX for a SRS
+  srx-to-srp  Get SRP for a SRX
+  srx-to-srr  Get SRR for a SRX
+  srx-to-srs  Get SRS for a SRX
+</pre></div>
+</div>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="commands/gse-to-gsm.html">gse-to-gsm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/gse-to-srp.html">gse-to-srp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/metadata.html">metadata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/metadb.html">metadb</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srp-to-gse.html">srp-to-gse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srp-to-srr.html">srp-to-srr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srp-to-srs.html">srp-to-srs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srp-to-srx.html">srp-to-srx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srr-to-srs.html">srr-to-srs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srr-to-srx.html">srr-to-srx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srs-to-srx.html">srs-to-srx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srx-to-srr.html">srx-to-srr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/srx-to-srs.html">srx-to-srs</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+            
+  <div class="footer-relations">
+    
+      <div class="pull-left">
+        <a class="btn btn-default" href="installation.html" title="previous chapter (use the left arrow)">Installation</a>
+      </div>
+    
+      <div class="pull-right">
+        <a class="btn btn-default" href="commands/gse-to-gsm.html" title="next chapter (use the right arrow)">gse-to-gsm</a>
+      </div>
+    </div>
+    <div class="clearer"></div>
+  
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="commands/gse-to-gsm.html" title="gse-to-gsm"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pysradb 0.10.3-dev0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2018, Saket Choudhary. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>
